@@ -186,7 +186,7 @@ Mat EdgeDetect(Mat Source, int Radius, int Threshold)
 // {
 //   static COLORREF blue = RGB(0,0,255);
 //   static COLORREF red = RGB(255,0,0); 
-//   Mat colored = Mat::zeros(BW.size() , CV_8UC1); 
+//   Mat colored = Mat::zeros(BW.rows(), BW.cols()*3 , CV_8UC3); 
 //
 //   for (int i = 0; i < BW.rows(); i++)
 //   {
