@@ -148,6 +148,34 @@ Mat MaxVal(Mat Source, int Radius)
   return maxed; 
 }
 
+Mat MinVal(Mat Source, int Radius)
+{
+  Mat minmat = Mat::zeros(Source.size(), CV_8UC1);
+  int avg = pow((2 * Radius) + 1, 2) ; 
+  
+  
+  for (int i = Radius ; i < Source.rows - Radius ; i++)
+  {
+    for (int j = Radius ; j < Source.cols - Radius ; j++)
+    {
+      int min = 255;
+      
+      for (int n = -Radius ; n <= Radius; n++)
+      {
+        for (int p = -Radius; p <= Radius; p++)
+        {
+          if (Source.at<uchar>((i+n), (j+p)) < min) min = Source.at<uchar>((i+n), (j+p));   
+        }
+        
+      }
+
+      minmat.at<uchar>(i,j) = min; 
+    }
+  }
+  
+  return minmat; 
+}
+
 Mat EdgeDetect(Mat Source, int Radius, int Threshold)
 {
 
@@ -158,21 +186,35 @@ Mat EdgeDetect(Mat Source, int Radius, int Threshold)
   {
     for (int j = Radius ; j < Source.cols - Radius ; j++)
     {
-      int sum = 0;
+      int avgL = 0;
+      int avgR = 0;
+      int countL = 0; 
+      int countR = 0;
       
-      for (int n = -Radius ; n <= Radius; n++)
+      for (int n = -Radius ; n < 0; n++)
       {
-        for (int p = -Radius; p <= Radius; p++)
+        for (int p = -Radius; p < 0; p++)
         {
-          sum += Source.at<uchar>((i+n), (j+p));
+          countL++; 
+          avgL += (Source.at<uchar>((i+n), (j+p)))/countL;
           
         }
         
       }
-      edged.at<uchar>(i,j) = sum / avg;
 
-      if (edged.at<uchar>(i,j) >= Threshold) edged.at<uchar>(i,j) = 0;
-      else edged.at<uchar>(i,j) = 255; 
+      for (int n = 1 ; n <= Radius; n++)
+      {
+        for (int p = 1; p <= Radius; p++)
+        {
+          countR++; 
+          avgR += (Source.at<uchar>((i+n), (j+p)))/countR;
+          
+        }
+        
+      }
+
+      if (abs(avgL - avgR) > Threshold) edged.at<uchar>(i, j) = 255; 
+      
     }
   }
 
@@ -215,7 +257,8 @@ int main()
 {
   int threshold = 128;
   int blurradius = 2;
-  int maxradius = 5; 
+  int maxradius = 2;
+  int minradius = 2;
   
   Mat RGBImg = imread("..\\Img\\Data_1.jpg");
   imshow("RGB Image", RGBImg);
@@ -233,6 +276,10 @@ int main()
   Mat MaxImg = MaxVal(GreyImg, maxradius);
   std::string MaxTitle = "Blown Out @ " + std::to_string(maxradius) + " Radius"; 
   imshow(MaxTitle, MaxImg);
+
+  Mat MinImg = MinVal(GreyImg, minradius);
+  std::string MinTitle = "MinVal Image @ " + std::to_string(minradius) + " Radius"; 
+  imshow(MinTitle, MinImg);
   
   Mat ColNeg = Negative(RGBImg);
   imshow("Colour Negative", ColNeg);
