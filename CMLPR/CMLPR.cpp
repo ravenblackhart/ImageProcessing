@@ -294,8 +294,11 @@ int main()
   Mat SteppedImg = Step(GreyImg);
   imshow("Stepped Image", SteppedImg);
 
-  Mat EdgedImg = EdgeDetect(BlurredImg, 1, 55);
+  Mat EdgedImg = EdgeDetect(GreyImg, 1, 50);
   imshow("Edged Image", EdgedImg);
+
+  Mat BlurredEdgedImg = EdgeDetect(BlurredImg, 1, 50);
+  imshow("Blurred & Edged Image", BlurredEdgedImg);
 
   // Mat Colorized = Colourize(BWImg);
   // imshow("Colourized Image", Colorized); 
