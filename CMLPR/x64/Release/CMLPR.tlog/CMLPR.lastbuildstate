@@ -1,2 +1,2 @@
-PlatformToolSet=v142:VCToolArchitecture=Native64Bit:VCToolsVersion=14.29.30133:TargetPlatformVersion=10.0.16299.0:
+PlatformToolSet=v142:VCToolArchitecture=Native64Bit:VCToolsVersion=14.29.30133:TargetPlatformVersion=10.0.16299.0:VcpkgTriplet=x64-windows:
 Release|x64|G:\1. Git\CMLPR\CMLPR\|
