@@ -377,113 +377,140 @@ Mat Erosion (Mat Source , int Radius)
   
 }
 
-Mat Masking (Mat Source, float ROIW , float ROI_H)
+Mat EQHisto (Mat Source)
 {
-  Mat masked = Mat::zeros(Source.size(), CV_8UC3); 
+  Mat EQImg = Mat::zeros(Source.size(), CV_8UC1);
+  // count
+  int count[256] = {0};
+  for (int i = 0; i < Source.rows; i++)
+    for (int j = 0; j < Source.cols; j++)
+      count[Source.at<uchar>(i, j)]++;
+		
+
+  // probability
+  float prob[256] = { 0.0 };
+  for (int i = 0; i < 256; i++)
+    prob[i] = (float)count[i] / (float)(Source.rows * Source.cols);
+
+  // accumulated probability
+  float accprob[256] = { 0.0 };
+  accprob[0] = prob[0];
+  for (int i = 1; i < 256; i++)
+    accprob[i] = prob[i] + accprob[i - 1];
+  // new = 255 * accprob 
+  int newvalue[256] = { 0 };
+  for (int i = 0; i < 256; i++)
+    newvalue[i] = 255 * accprob[i];
+
+  for (int i = 0; i < Source.rows; i++)
+    for (int j = 0; j < Source.cols; j++)
+      EQImg.at<uchar>(i, j) = newvalue[Source.at<uchar>(i, j)];
+
+  return EQImg;
+}
+
+Mat Masking(Mat Source, float ROI_W_P , float ROI_H_P, int Threshold)
+{
+  Mat masked = Mat::zeros(Source.size(), CV_8UC1);
+  
+  float roi_height = ROI_H_P * Source.rows;
+  float roi_width = ROI_W_P * Source.cols;
+ 
+  int y = (int)(Source.rows - roi_height)/2;
+  int x = (int)(Source.cols - roi_width)/2;
+
+  for (int i = y; i < Source.rows - y; i++ )
+  {
+    for (int j = x; j < Source.cols - x; j++)
+    {
+      if (Source.at<uchar>(i,j) > Threshold) masked.at<uchar>(i,j) = Source.at<uchar>(i,j);
+    }
+  }
+
+  return masked; 
 }
 
 
 
-// Mat Colourize (Mat BW)
-// {
-//   Mat colored = Mat::zeros(BW.size() , CV_8UC3);
-//   Scalar Blue = CV_RGB(255, 0 , 0 );
-//   Scalar Red = CV_RGB(0, 0, 255); 
-//
-//   for (int i = 0; i < BW.rows(); i++)
-//   {
-//     for (int j = 0; j < BW.cols() * 3 ; j+=3)
-//     {
-//       if (BW.at<uchar>(i,j) == 255)
-//       {
-//         
-//         colored.at<uchar>(i,j) = Blue; 
-//       }
-//
-//       else
-//       {
-//         colored.at<uchar>(i,j) = 0;
-//         colored.at<uchar>(i,j+1)= 0;
-//         colored.at<uchar>(i,j+2) = 255;
-//       }
-//     }
-//   }
-//
-//   return colored; 
-// }
+Mat Colourize (Mat BW)
+{
+  Mat colored = Mat::zeros(BW.size() , CV_8UC3);
+
+  for (int i = 0; i < BW.rows; i++)
+  {
+    for (int j = 0; j < BW.cols; j++)
+    {
+      if (BW.at<uchar>(i,j) == 255)
+      {
+        colored.at<Vec3b>(i,j)[0] = 255;
+        colored.at<Vec3b>(i,j)[1] = 0;
+        colored.at<Vec3b>(i,j)[2] = 0;
+        
+      }
+
+      else
+      {
+        colored.at<Vec3b>(i,j)[0] = 0;
+        colored.at<Vec3b>(i,j)[1] = 0;
+        colored.at<Vec3b>(i,j)[2] = 255;
+      }
+    }
+  }
+
+  return colored; 
+}
 
 int main()
 {
-  int threshold = 128;
-  int blurradius = 3;
+  int threshold = 120;
+  int blurradius = 2;
   int maxradius = 2;
   int minradius = 2;
 
   int edgeradius = 2; 
-  int edgethreshold = 45; 
+  int edgethreshold = 50; 
+
+  float roi_width_percent = 0.7;
+  float roi_height_percent = 0.7; 
   
-  
-  Mat RGBImg = imread("..\\Img\\Data_76.jpg");
+  Mat RGBImg = imread("..\\Img\\Data_10.jpg");
   imshow("RGB Image", RGBImg);
 
-  Mat ColNeg = Negative(RGBImg);
-  // imshow("Colour Negative", ColNeg);
-
-  cout << "Image Size: " << RGBImg.rows << "(w) x " << RGBImg.cols << " (h)" << std::endl;
+  cout << "Image Size: " << RGBImg.cols << "(w) x " << RGBImg.rows << " (h)" << std::endl;
   cout << "BW Threshold Set At: " << threshold << std::endl;
 
   Mat GreyImg = RGB2Grey(RGBImg);
-  // imshow("Greyscale", GreyImg);
+  imshow("Greyscale", GreyImg);
 
-  Mat InvGreyImg = InverseGrey(GreyImg);
-  // imshow("Inverted Greyscale", InvGreyImg);
+  Mat EQImg = EQHisto(GreyImg);
+  imshow("EQ Grey image", EQImg);
+
+  Mat MaskedImg = Masking(EQImg, roi_width_percent, roi_height_percent, threshold);
+  imshow("Masked to ROI", MaskedImg); ;
 
   Mat BlurredImg = Blur(GreyImg, blurradius);
   string BlurTitle = "Blurred Greyscale @ " + std::to_string(blurradius) + " Blur Radius"; 
-  // imshow(BlurTitle, BlurredImg);
-
-  Mat MaxImg = MaxVal(GreyImg, maxradius);
-  string MaxTitle = "Blown Out @ " + std::to_string(maxradius) + " Radius"; 
-  // imshow(MaxTitle, MaxImg);
-
-  Mat MinImg = MinVal(GreyImg, minradius);
-  string MinTitle = "MinVal Image @ " + std::to_string(minradius) + " Radius"; 
-  // imshow(MinTitle, MinImg);
+  imshow(BlurTitle, BlurredImg);
   
-  Mat BWImg = Grey2BW(GreyImg, threshold);
+  Mat BWImg = Grey2BW(EQImg, threshold);
   string BWTitle = "Black & White Image, Threshold set at : " + std::to_string(threshold);  
-  // imshow(BWTitle, BWImg);
-
-  Mat SteppedImg = Step(GreyImg);
-  // imshow("Stepped Image", SteppedImg);
-
-  Mat EdgedImg = AllEdgeDetect(GreyImg, edgeradius, edgethreshold);
-  // imshow("Edged Image", EdgedImg);
-
-  Mat BlurredEdgedImg = AllEdgeDetect(BlurredImg, edgeradius, edgethreshold);
-  // imshow("Blurred & Edged Image", BlurredEdgedImg);
+  imshow(BWTitle, BWImg);
 
   Mat VertBlurredEdgedImg = VertEdgeDetect(BlurredImg, edgeradius, edgethreshold);
   imshow("Blurred & Vertically Edged Image", VertBlurredEdgedImg);
-
-  Mat HorBlurredEdgedImg = HorEdgeDetect(BlurredImg, edgeradius, edgethreshold);
-  // imshow("Blurred & Horizontally Edged Image", HorBlurredEdgedImg);
-
+  
   Mat ErodedImg = Erosion(VertBlurredEdgedImg, 1);
   imshow("Eroded Image", ErodedImg);
 
-  Mat DilatedImg = Dilation(VertBlurredEdgedImg, 3);
-  imshow("Dilated Image Without Erosion", DilatedImg);
-
-  Mat DilatedImg2 = Dilation(ErodedImg, 6);
-  imshow("Dilated Image After Erosion", DilatedImg2);
+  Mat DilatedImg = Dilation(ErodedImg, 6);
+  imshow("Dilated Image After Erosion", DilatedImg);
 
 
   Mat DilatedImgCpy;
-  DilatedImgCpy = DilatedImg2.clone();
+  DilatedImgCpy = DilatedImg.clone();
   vector<vector<Point>> contours1;
   vector<Vec4i> hierachy1;
-  findContours(DilatedImg2, contours1, hierachy1, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));
+  findContours(DilatedImg, contours1, hierachy1, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));
   Mat dst = Mat::zeros(GreyImg.size(), CV_8UC3);
 
 
@@ -508,12 +535,12 @@ int main()
   {
     rect = boundingRect(contours1[i]);
     
-    if (rect.width < 40 ||rect.height < 40||rect.width <= rect.height || rect.width < 1.6 * rect.height || rect.width > 4 * rect.height || rect.x < 0.15 * GreyImg.cols || rect.x > 0.85 * GreyImg.cols || rect.y < 0.15 * GreyImg.rows || rect.y > 0.85 * GreyImg.rows)
+    if (rect.height < 0.05 * GreyImg.rows || rect.width < 0.05 * GreyImg.cols || rect.width <= rect.height || rect.width < 1.5 * rect.height || rect.width > 4 * rect.height || rect.x < 0.2 * GreyImg.cols || rect.x > 0.8 * GreyImg.cols || rect.y < 0.2 * GreyImg.rows || rect.y > 0.8 * GreyImg.rows)
     {
       drawContours(DilatedImgCpy, contours1, i, black, -1, 8, hierachy1);
     }
 
-    else plate = GreyImg(rect); 
+    else plate = EQImg(rect); 
         
   }
 
@@ -524,11 +551,10 @@ int main()
   {
     imshow("Detected Plate", plate);
   }
+
+  Mat ColorizedImg = Colourize(BWImg);
+  imshow("Colourized Red Blue", ColorizedImg); 
   
-  
-  
-  // Mat Colorized = Colourize(BWImg);
-  // imshow("Colourized Image", Colorized); 
   waitKey();
 
   tesseract::TessBaseAPI* api = new tesseract::TessBaseAPI();
